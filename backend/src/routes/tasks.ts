@@ -1,0 +1,285 @@
+import { Router } from "express";
+import { body, param, validationResult } from "express-validator";
+import { authenticate } from "../middleware/authenticate";
+import { prisma } from "../lib/prisma";
+import { computePosition, needsRebalance, rebalancePositions } from "../utils/fractional";
+
+const router = Router();
+
+function sendValidationErrors(req: any, res: any): boolean {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ errors: errors.array() });
+    return true;
+  }
+  return false;
+}
+// Cast Express params (typed as string | string[]) to plain string
+const p = (v: string | string[]): string => v as string;
+
+// Helper: resolve boardId from a columnId
+async function getBoardIdForColumn(columnId: string): Promise<string | null> {
+  const column = await prisma.column.findUnique({
+    where: { id: columnId },
+    select: { boardId: true },
+  });
+  return column?.boardId ?? null;
+}
+
+// Helper: resolve boardId from a taskId
+async function getBoardIdForTask(taskId: string): Promise<string | null> {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { columnId: true },
+  });
+  if (!task) return null;
+  const column = await prisma.column.findUnique({
+    where: { id: task.columnId },
+    select: { boardId: true },
+  });
+  return column?.boardId ?? null;
+}
+
+// Helper: check EDITOR+ membership
+async function requireEditor(boardId: string, userId: string, res: any): Promise<boolean> {
+  const member = await prisma.boardMember.findUnique({
+    where: { boardId_userId: { boardId, userId } },
+  });
+  if (!member || member.role === "VIEWER") {
+    res.status(403).json({ error: "Forbidden: EDITOR or OWNER required" });
+    return false;
+  }
+  return true;
+}
+
+// ─── POST /api/v1/columns/:columnId/tasks — create task (EDITOR+) ─────────────
+
+router.post(
+  "/columns/:columnId/tasks",
+  authenticate,
+  param("columnId").isUUID().withMessage("Invalid columnId"),
+  body("title").notEmpty().withMessage("Title is required").trim(),
+  body("description").optional().trim(),
+  async (req, res) => {
+    if (sendValidationErrors(req, res)) return;
+
+    try {
+      const boardId = await getBoardIdForColumn(p(req.params.columnId));
+      if (!boardId) {
+        res.status(404).json({ error: "Column not found" });
+        return;
+      }
+
+      if (!(await requireEditor(boardId, req.user!.id, res))) return;
+
+      // Append to end of column
+      const lastTask = await prisma.task.findFirst({
+        where: { columnId: p(req.params.columnId) },
+        orderBy: { position: "desc" },
+        select: { position: true },
+      });
+
+      const position = computePosition(lastTask?.position ?? null, null);
+
+      const task = await prisma.task.create({
+        data: {
+          columnId: p(req.params.columnId),
+          title: req.body.title,
+          description: req.body.description ?? null,
+          position,
+          createdById: req.user!.id,
+        },
+      });
+
+      res.status(201).json({ task });
+    } catch (error) {
+      console.error("Create task error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+// ─── PATCH /api/v1/tasks/:taskId — update title/description (EDITOR+) ──────────
+
+router.patch(
+  "/:taskId",
+  authenticate,
+  param("taskId").isUUID().withMessage("Invalid taskId"),
+  body("title").optional().notEmpty().trim(),
+  body("description").optional().trim(),
+  async (req, res) => {
+    if (sendValidationErrors(req, res)) return;
+
+    try {
+      const boardId = await getBoardIdForTask(p(req.params.taskId));
+      if (!boardId) {
+        res.status(404).json({ error: "Task not found" });
+        return;
+      }
+
+      if (!(await requireEditor(boardId, req.user!.id, res))) return;
+
+      const task = await prisma.task.update({
+        where: { id: p(req.params.taskId) },
+        data: {
+          ...(req.body.title !== undefined && { title: req.body.title }),
+          ...(req.body.description !== undefined && { description: req.body.description }),
+        },
+      });
+
+      res.json({ task });
+    } catch (error: any) {
+      if (error?.code === "P2025") {
+        res.status(404).json({ error: "Task not found" });
+        return;
+      }
+      console.error("Update task error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+// ─── DELETE /api/v1/tasks/:taskId — delete task (EDITOR+) ─────────────────────
+
+router.delete(
+  "/:taskId",
+  authenticate,
+  param("taskId").isUUID().withMessage("Invalid taskId"),
+  async (req, res) => {
+    if (sendValidationErrors(req, res)) return;
+
+    try {
+      const boardId = await getBoardIdForTask(p(req.params.taskId));
+      if (!boardId) {
+        res.status(404).json({ error: "Task not found" });
+        return;
+      }
+
+      if (!(await requireEditor(boardId, req.user!.id, res))) return;
+
+      await prisma.task.delete({ where: { id: p(req.params.taskId) } });
+      res.status(204).send();
+    } catch (error: any) {
+      if (error?.code === "P2025") {
+        res.status(404).json({ error: "Task not found" });
+        return;
+      }
+      console.error("Delete task error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+// ─── POST /api/v1/tasks/:taskId/move — move task (EDITOR+) ────────────────────
+//
+// Body:
+//   targetColumnId: string     (required — destination column, same or different)
+//   afterTaskId:    string|null (task this goes AFTER; null = insert at start)
+//   beforeTaskId:   string|null (task this goes BEFORE; null = insert at end)
+
+router.post(
+  "/:taskId/move",
+  authenticate,
+  param("taskId").isUUID().withMessage("Invalid taskId"),
+  body("targetColumnId").isUUID().withMessage("targetColumnId must be a valid UUID"),
+  body("afterTaskId").optional({ nullable: true }).isUUID().withMessage("afterTaskId must be a UUID or null"),
+  body("beforeTaskId").optional({ nullable: true }).isUUID().withMessage("beforeTaskId must be a UUID or null"),
+  async (req, res) => {
+    if (sendValidationErrors(req, res)) return;
+
+    const taskId = p(req.params.taskId);
+    const { targetColumnId, afterTaskId, beforeTaskId } = req.body;
+
+    try {
+      // 1. Verify the task exists and get its board
+      const task = await prisma.task.findUnique({
+        where: { id: taskId },
+        select: { id: true, columnId: true },
+      });
+
+      if (!task) {
+        res.status(404).json({ error: "Task not found" });
+        return;
+      }
+
+      const column = await prisma.column.findUnique({
+        where: { id: task.columnId },
+        select: { boardId: true },
+      });
+      const boardId = column?.boardId ?? "";
+      if (!boardId) {
+        res.status(404).json({ error: "Column for task not found" });
+        return;
+      }
+
+      // 2. Verify EDITOR+ access
+      if (!(await requireEditor(boardId, req.user!.id, res))) return;
+
+      // 3. Verify targetColumn belongs to the same board
+      const targetColumn = await prisma.column.findUnique({
+        where: { id: targetColumnId },
+        select: { boardId: true },
+      });
+
+      if (!targetColumn || targetColumn.boardId !== boardId) {
+        res.status(400).json({ error: "targetColumnId does not belong to the same board" });
+        return;
+      }
+
+      // 4. Fetch neighbor positions
+      const afterTask = afterTaskId
+        ? await prisma.task.findUnique({ where: { id: afterTaskId }, select: { position: true } })
+        : null;
+
+      const beforeTask = beforeTaskId
+        ? await prisma.task.findUnique({ where: { id: beforeTaskId }, select: { position: true } })
+        : null;
+
+      const prevPos = afterTask?.position ?? null;
+      const nextPos = beforeTask?.position ?? null;
+
+      // 5. Compute new position
+      const newPosition = computePosition(prevPos, nextPos);
+
+      // 6. Atomically update task + rebalance if needed
+      const updatedTask = await prisma.$transaction(async (tx) => {
+        const updated = await tx.task.update({
+          where: { id: taskId },
+          data: {
+            columnId: targetColumnId as string,
+            position: newPosition,
+          },
+        });
+
+        // Check if rebalance is needed in the target column
+        const allPositions = await tx.task.findMany({
+          where: { columnId: targetColumnId as string },
+          select: { id: true, position: true },
+          orderBy: { position: "asc" },
+        });
+
+        if (needsRebalance(allPositions.map((t) => t.position))) {
+          const newPositions = rebalancePositions(allPositions.length);
+          await Promise.all(
+            allPositions.map((t, i) =>
+              tx.task.update({
+                where: { id: t.id },
+                data: { position: newPositions[i] },
+              })
+            )
+          );
+          console.log(`Rebalanced ${allPositions.length} tasks in column ${targetColumnId}`);
+        }
+
+        return updated;
+      });
+
+      res.json({ task: updatedTask });
+    } catch (error) {
+      console.error("Move task error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+export default router;
