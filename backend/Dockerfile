@@ -8,7 +8,8 @@ RUN npm install
 
 COPY . .
 
-RUN npx prisma generate
+# Prisma client is generated at container start (see docker-compose command),
+# not at build time — the build has no .env / connection vars available.
 
 EXPOSE 5000
 
