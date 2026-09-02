@@ -12,8 +12,8 @@ dist/
 out/
 build/
 
-# Prisma generated client
-src/generated/prisma/
+# Prisma generated client (matches at any depth, e.g. backend/src/generated/prisma/)
+**/generated/prisma/
 
 # Logs
 *.log
