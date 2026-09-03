@@ -70,7 +70,6 @@ router.get("/", authenticate, async (req, res) => {
           include: {
             _count: {
               select: {
-                tasks: false,
                 members: true,
               },
             },
