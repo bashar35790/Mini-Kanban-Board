@@ -10,34 +10,34 @@ import tasksRouter from "./routes/tasks";
 
 const app = express();
 
-// 1. CORS first — handles preflight OPTIONS and sets headers for every path (incl. /api/auth/*)
+// 1. CORS first - handles preflight OPTIONS and sets headers for every path (incl. /api/auth/*)
 app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
 
-// 2. Better Auth before body parsing — it reads the raw request stream itself;
+// 2. Better Auth before body parsing - it reads the raw request stream itself;
 //    express.json() would otherwise drain the body and break sign-up/sign-in.
-//    *splat (Express 5) — bare * is rejected by Express 5's route parser
+//    *splat (Express 5) - bare * is rejected by Express 5's route parser
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
 // 3. express.json() only for your own /api/v1/* routes (they need a parsed JSON body)
 app.use(express.json());
 
-// ─── Health check ─────────────────────────────────────────────────────────────
+//  Health check 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-// ─── API v1 Routes ────────────────────────────────────────────────────────────
+//  API v1 Routes 
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/boards", boardsRouter);
 app.use("/api/v1/columns", columnsRouter);
 app.use("/api/v1/tasks", tasksRouter);
 
-// Task creation uses /columns/:columnId/tasks — mounted under /api/v1
+// Task creation uses /columns/:columnId/tasks - mounted under /api/v1
 app.use("/api/v1", tasksRouter);
 
-// ─── 404 fallback ─────────────────────────────────────────────────────────────
+// 404 fallback 
 app.use((_req, res) => {
-  res.status(404).json({ error: "Not found" });
+  res.status(404).json({ error: "Not found" }); 
 });
 
 app.listen(process.env.PORT || 5000, () => {
