@@ -48,31 +48,31 @@ export function ShareBoardModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Share Board">
-      <form onSubmit={handleInvite} className="mb-6 flex flex-col gap-3">
+      <form onSubmit={handleInvite} className="mb-6 flex flex-col gap-4">
         <Input
           name="email"
           type="email"
           label="Invite teammate by email"
-          placeholder="colleague@flow.com"
+          placeholder="colleague@task.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={invite.isPending}
         />
 
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-3">
           <div className="flex flex-col gap-1.5 flex-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <span className="text-xs font-bold tracking-wide text-slate-700">
               Role
             </span>
-            <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-0.5">
+            <div className="flex overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/60 p-1">
               {roles.map((role) => (
                 <button
                   key={role}
                   type="button"
                   onClick={() => setSelectedRole(role)}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                     selectedRole === role
-                      ? "bg-white text-blue-600 shadow-xs"
+                      ? "bg-white text-indigo-600 shadow-xs"
                       : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
@@ -84,29 +84,29 @@ export function ShareBoardModal({
           <Button
             type="submit"
             loading={invite.isPending}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-5 h-9"
+            className="h-11 px-6 text-xs font-bold rounded-2xl"
           >
             Invite
           </Button>
         </div>
 
         {invite.isError ? (
-          <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">
-            {(invite.error as Error)?.message ?? "Failed to invite"}
+          <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-medium text-rose-600">
+            {(invite.error as Error)?.message ?? "Failed to invite member"}
           </p>
         ) : null}
       </form>
 
       <div>
-        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
           Board Members ({members.length})
         </h3>
         {query.isPending ? (
           <div className="flex justify-center py-6">
-            <Spinner className="h-6 w-6 text-blue-600" />
+            <Spinner className="h-6 w-6 text-indigo-600" />
           </div>
         ) : (
-          <ul className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
+          <ul className="flex flex-col gap-2.5 max-h-60 overflow-y-auto pr-1">
             {members.map((member) => (
               <MemberRow
                 key={member.id}
@@ -145,8 +145,8 @@ function MemberRow({
   const email = member.user?.email ?? "";
 
   return (
-    <li className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-2.5">
-      <div className="flex min-w-0 items-center gap-2.5">
+    <li className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-3">
+      <div className="flex min-w-0 items-center gap-3">
         <Avatar name={name} size="sm" />
         <div className="min-w-0">
           <p className="truncate text-xs font-bold text-slate-800">
@@ -156,12 +156,12 @@ function MemberRow({
           <p className="truncate text-[11px] text-slate-400">{email}</p>
         </div>
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2">
         <select
           value={member.role}
           onChange={(e) => onChangeRole(e.target.value as BoardRole)}
           disabled={removing || isSelf}
-          className="h-7 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 focus:outline-none disabled:opacity-60 cursor-pointer"
+          className="h-8 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 focus:outline-none disabled:opacity-60 cursor-pointer shadow-2xs"
         >
           {roles.map((role) => (
             <option key={role} value={role}>
@@ -174,7 +174,7 @@ function MemberRow({
             onClick={onRemove}
             disabled={removing}
             aria-label={`Remove ${name}`}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer disabled:opacity-50"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer disabled:opacity-50"
           >
             ✕
           </button>
@@ -183,3 +183,4 @@ function MemberRow({
     </li>
   );
 }
+

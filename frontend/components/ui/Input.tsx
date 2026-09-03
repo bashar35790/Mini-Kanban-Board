@@ -15,7 +15,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label ? (
           <label
             htmlFor={inputId}
-            className="text-xs font-semibold uppercase tracking-wider text-slate-500"
+            className="text-xs font-bold tracking-wide text-slate-700"
           >
             {label}
           </label>
@@ -29,7 +29,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
-            className={`h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 placeholder:text-slate-400 shadow-xs transition-all duration-150 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-3 focus:ring-indigo-100 ${
+            className={`h-11 w-full rounded-2xl border border-slate-200/80 bg-slate-50/60 px-4 text-xs font-medium text-slate-800 placeholder:text-slate-400 shadow-xs transition-all duration-150 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100/60 ${
               leftIcon ? "pl-9" : ""
             } ${error ? "border-rose-400 focus:border-rose-400 focus:ring-rose-100" : ""} ${className ?? ""}`}
             {...props}
@@ -44,3 +44,4 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = "Input";
+
