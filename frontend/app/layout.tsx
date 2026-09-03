@@ -9,14 +9,18 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Kanban",
-  description: "A minimal drag-and-drop kanban board",
+  title: "TASK — Kanban & Workflow Management",
+  description: "Modern intuitive Kanban board with fluid drag-and-drop collaboration",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-bg text-text">
+      <body className="min-h-full flex flex-col font-sans selection:bg-pink-100 selection:text-pink-900">
         <Providers>{children}</Providers>
       </body>
     </html>

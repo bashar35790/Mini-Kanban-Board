@@ -2,15 +2,20 @@ import type { Metadata } from "next";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 
 export const metadata: Metadata = {
-  title: "Sign up — Kanban",
+  title: "Sign up — TASK Kanban",
 };
 
 export default function RegisterPage() {
   return (
     <div className="flex flex-1 items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-card border border-border bg-surface p-8 shadow-2xl backdrop-blur">
-        <h1 className="mb-1 text-2xl font-bold text-text">Create your account</h1>
-        <p className="mb-6 text-sm text-muted">Start organizing with kanban boards</p>
+      <div className="w-full max-w-sm rounded-3xl border border-white/80 bg-white/90 p-8 shadow-xl shadow-slate-200/50 backdrop-blur-md">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-pink-500 font-bold text-white shadow-md shadow-pink-200">
+            T
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-800">Create account</h1>
+          <p className="text-sm text-slate-500 mt-1">Start organizing your team and tasks</p>
+        </div>
         <RegisterForm />
       </div>
     </div>
