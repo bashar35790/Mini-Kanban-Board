@@ -9,6 +9,11 @@ export type Task = {
   columnId: string;
   title: string;
   description: string | null;
+  category: string;
+  dueDate: string | null;
+  commentsCount: number;
+  attachmentsCount: number;
+  assigneeId: string | null;
   position: number;
   createdAt: string;
   updatedAt: string;
@@ -33,16 +38,28 @@ export type Member = {
   user?: { id: string; name: string; email: string; image: string | null };
 };
 
+export type BoardActivity = {
+  id: string;
+  boardId: string;
+  userName: string;
+  action: string;
+  target?: string | null;
+  iconColor: string; // orange, green, purple, blue
+  createdAt: string;
+};
+
 export type BoardDetail = {
   board: {
     id: string;
     title: string;
     description: string | null;
     ownerId: string;
+    isFavorite: boolean;
     createdAt: string;
     updatedAt: string;
     columns: Column[];
     members: Member[];
+    activities: BoardActivity[];
   };
   yourRole: BoardRole;
 };

@@ -11,6 +11,7 @@ import {
 } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
 import { KanbanColumn } from "./KanbanColumn";
+import { KanbanTask } from "./KanbanTask";
 import { AddColumnForm } from "./AddColumnForm";
 import type { Column, Task } from "@/hooks/useBoard";
 
@@ -25,7 +26,7 @@ type KanbanBoardProps = {
   }) => void;
   onAddColumn: (title: string) => void;
   onDeleteColumn: (columnId: string) => void;
-  onAddTask: (columnId: string, title: string, description?: string) => void;
+  onAddTask: (columnId: string, title: string, category: string, assignee: string) => void;
   onDeleteTask: (task: Task) => void;
 };
 
@@ -55,7 +56,6 @@ export function KanbanBoard({
     const { active, over } = event;
     if (!over) return;
 
-    // Ignore drop on a task that is just the active one
     if (active.id === over.id) return;
 
     const draggedTask = allTasks.find((t) => t.id === active.id);
@@ -65,15 +65,11 @@ export function KanbanBoard({
     let targetColumnId = draggedTask.columnId;
 
     if (overTask) {
-      // Dropped on a task — same or different column
       targetColumnId = overTask.columnId;
-
-      // Tasks in target column (without the dragged task), in order
-      const constTasks = columns.find((c) => c.id === targetColumnId)?.tasks ?? [];
-      const targetTasks = constTasks.filter((t) => t.id !== draggedTask.id);
+      const colTasks = columns.find((c) => c.id === targetColumnId)?.tasks ?? [];
+      const targetTasks = colTasks.filter((t) => t.id !== draggedTask.id);
       const overIndex = targetTasks.findIndex((t) => t.id === overTask.id);
 
-      // Insert dragged task at the over-position
       const reordered = [...targetTasks];
       reordered.splice(overIndex < 0 ? reordered.length : overIndex, 0, draggedTask);
 
@@ -87,7 +83,6 @@ export function KanbanBoard({
         beforeTaskId: before?.id ?? null,
       });
     } else {
-      // Dropped on empty space of a column (over.id is a column id)
       targetColumnId = String(over.id);
       const targetTasks = columns.find((c) => c.id === targetColumnId)?.tasks ?? [];
 
@@ -116,15 +111,15 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-4 overflow-x-auto pb-6 pt-1 items-start">
         {columns.map((column) => (
           <KanbanColumn
             key={column.id}
             column={column}
             canEdit={canEdit}
             onDeleteColumn={() => onDeleteColumn(column.id)}
-            onAddTask={(title, description) =>
-              onAddTask(column.id, title, description)
+            onAddTask={(title, category, assignee) =>
+              onAddTask(column.id, title, category, assignee)
             }
             onDeleteTask={onDeleteTask}
           />
@@ -134,11 +129,8 @@ export function KanbanBoard({
 
       <DragOverlay>
         {activeTask ? (
-          <div className="flex flex-col gap-1 rounded-lg border border-primary/50 bg-surface-2 p-3 shadow-2xl">
-            <p className="text-sm font-medium text-text">{activeTask.title}</p>
-            <span className="text-[9px] font-medium uppercase tracking-wider text-muted">
-              dragging
-            </span>
+          <div className="w-68 rotate-2 scale-105 pointer-events-none shadow-2xl">
+            <KanbanTask task={activeTask} />
           </div>
         ) : null}
       </DragOverlay>

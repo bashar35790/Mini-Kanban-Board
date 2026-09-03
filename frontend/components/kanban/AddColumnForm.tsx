@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 
 type AddColumnFormProps = {
   onSubmit: (title: string) => void;
@@ -16,9 +15,9 @@ export function AddColumnForm({ onSubmit }: AddColumnFormProps) {
     return (
       <button
         onClick={() => setActive(true)}
-        className="flex h-12 w-72 shrink-0 items-center justify-center gap-1 rounded-card border border-dashed border-border bg-surface/50 text-sm text-muted transition-colors hover:border-primary/50 hover:text-primary"
+        className="flex h-12 w-72 shrink-0 items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300/80 bg-white/40 text-xs font-bold text-slate-500 transition-all hover:border-indigo-400 hover:text-indigo-600 hover:bg-white cursor-pointer"
       >
-        + Add column
+        <span className="text-base leading-none">+</span> Add column
       </button>
     );
   }
@@ -34,21 +33,21 @@ export function AddColumnForm({ onSubmit }: AddColumnFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex w-72 shrink-0 flex-col gap-2 rounded-card border border-border bg-surface p-3"
+      className="flex w-72 shrink-0 flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm"
     >
-      <Input
-        name="columnTitle"
-        placeholder="Column title"
+      <input
+        type="text"
+        placeholder="Column title (e.g. In Review)"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         autoFocus
-        className="h-9"
+        className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-indigo-400 focus:outline-none"
       />
       <div className="flex gap-2">
-        <Button type="submit" size="sm" className="flex-1">
-          Add column
+        <Button type="submit" size="sm" className="flex-1 text-xs">
+          Add
         </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={() => setActive(false)}>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setActive(false)} className="text-xs">
           Cancel
         </Button>
       </div>

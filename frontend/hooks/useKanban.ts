@@ -122,12 +122,21 @@ export function useDeleteColumn(boardId: string) {
   });
 }
 
+export type AddTaskInput = {
+  columnId: string;
+  title: string;
+  description?: string;
+  category?: string;
+  dueDate?: string;
+  assigneeId?: string;
+};
+
 export function useAddTask(boardId: string) {
   const queryClient = useQueryClient();
   const key = ["board", boardId];
 
   return useMutation({
-    mutationFn: async (input: { columnId: string; title: string; description?: string }) => {
+    mutationFn: async (input: AddTaskInput) => {
       const data = await apiFetch<{ task: Task }>(
         `/columns/${input.columnId}/tasks`,
         {
@@ -135,6 +144,9 @@ export function useAddTask(boardId: string) {
           body: JSON.stringify({
             title: input.title,
             description: input.description ?? undefined,
+            category: input.category || "UI Design",
+            dueDate: input.dueDate || "Nov 24",
+            assigneeId: input.assigneeId || "Samantha",
           }),
         }
       );
