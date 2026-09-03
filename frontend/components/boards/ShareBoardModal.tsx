@@ -47,31 +47,33 @@ export function ShareBoardModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Share board">
+    <Modal open={open} onClose={onClose} title="Share Board">
       <form onSubmit={handleInvite} className="mb-6 flex flex-col gap-3">
         <Input
           name="email"
           type="email"
-          label="Invite by email"
-          placeholder="teammate@example.com"
+          label="Invite teammate by email"
+          placeholder="colleague@flow.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={invite.isPending}
         />
 
         <div className="flex items-end gap-2">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-muted">Role</span>
-            <div className="flex overflow-hidden rounded-lg border border-border">
+          <div className="flex flex-col gap-1.5 flex-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Role
+            </span>
+            <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-0.5">
               {roles.map((role) => (
                 <button
                   key={role}
                   type="button"
                   onClick={() => setSelectedRole(role)}
-                  className={`px-3 py-2 text-sm transition-colors ${
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                     selectedRole === role
-                      ? "bg-primary text-white"
-                      : "bg-surface-2 text-muted hover:text-text"
+                      ? "bg-white text-blue-600 shadow-xs"
+                      : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
                   {roleLabels[role]}
@@ -79,26 +81,32 @@ export function ShareBoardModal({
               ))}
             </div>
           </div>
-          <Button type="submit" loading={invite.isPending} className="flex-1">
+          <Button
+            type="submit"
+            loading={invite.isPending}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-5 h-9"
+          >
             Invite
           </Button>
         </div>
 
         {invite.isError ? (
-          <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+          <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">
             {(invite.error as Error)?.message ?? "Failed to invite"}
           </p>
         ) : null}
       </form>
 
       <div>
-        <h3 className="mb-3 text-sm font-semibold text-text">Members</h3>
+        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+          Board Members ({members.length})
+        </h3>
         {query.isPending ? (
           <div className="flex justify-center py-6">
-            <Spinner className="h-6 w-6 text-primary" />
+            <Spinner className="h-6 w-6 text-blue-600" />
           </div>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
             {members.map((member) => (
               <MemberRow
                 key={member.id}
@@ -137,23 +145,23 @@ function MemberRow({
   const email = member.user?.email ?? "";
 
   return (
-    <li className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 p-3">
-      <div className="flex min-w-0 items-center gap-3">
+    <li className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-2.5">
+      <div className="flex min-w-0 items-center gap-2.5">
         <Avatar name={name} size="sm" />
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-text">
+          <p className="truncate text-xs font-bold text-slate-800">
             {name}
-            {isSelf ? <span className="ml-1 text-xs text-muted">(you)</span> : null}
+            {isSelf ? <span className="ml-1 text-[10px] text-slate-400 font-normal">(you)</span> : null}
           </p>
-          <p className="truncate text-xs text-muted">{email}</p>
+          <p className="truncate text-[11px] text-slate-400">{email}</p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <select
           value={member.role}
           onChange={(e) => onChangeRole(e.target.value as BoardRole)}
           disabled={removing || isSelf}
-          className="h-8 rounded-lg border border-border bg-surface px-2 text-xs text-text focus:border-primary focus:outline-none disabled:opacity-60"
+          className="h-7 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 focus:outline-none disabled:opacity-60 cursor-pointer"
         >
           {roles.map((role) => (
             <option key={role} value={role}>
@@ -166,7 +174,7 @@ function MemberRow({
             onClick={onRemove}
             disabled={removing}
             aria-label={`Remove ${name}`}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/15 hover:text-danger disabled:opacity-60"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer disabled:opacity-50"
           >
             ✕
           </button>
