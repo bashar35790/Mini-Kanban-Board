@@ -77,11 +77,11 @@ export default function BoardPage() {
         tasks,
       };
     });
-  }, [board?.columns, filterCategory, searchTaskQuery, sortBy]);
+  }, [board, filterCategory, searchTaskQuery, sortBy]);
 
   const allTasks = useMemo(() => {
     return board?.columns?.flatMap((c) => c.tasks) || [];
-  }, [board?.columns]);
+  }, [board]);
 
   if (authPending) {
     return (
