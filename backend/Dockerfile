@@ -1,16 +1,31 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 COPY package*.json ./
+COPY prisma ./prisma/
 
-RUN npm install
+RUN npm ci
 
 COPY . .
 
-# Prisma client is generated at container start (see docker-compose command),
-# not at build time — the build has no .env / connection vars available.
+RUN npm run build
+
+# ── Production image ────────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY package*.json ./
+COPY prisma ./prisma/
+
+RUN npm ci --omit=dev
+
+COPY --from=builder /app/dist ./dist
 
 EXPOSE 5000
 
-CMD ["npm", "run", "start:dev"]
+# Run migrations then start the compiled server
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
