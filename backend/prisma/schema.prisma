@@ -94,11 +94,13 @@ model Board {
   title       String
   description String?
   ownerId     String        // references Better Auth user.id
+  isFavorite  Boolean       @default(false)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   columns     Column[]
   members     BoardMember[]
+  activities  BoardActivity[]
 }
 
 model BoardMember {
@@ -129,16 +131,36 @@ model Column {
 }
 
 model Task {
-  id          String   @id @default(uuid())
-  columnId    String
-  title       String
-  description String?
-  position    Float    // fractional index within column
-  createdById String   // references Better Auth user.id
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(uuid())
+  columnId         String
+  title            String
+  description      String?
+  category         String   @default("UI Design")
+  dueDate          String?  // e.g. "Nov 24"
+  commentsCount    Int      @default(0)
+  attachmentsCount Int      @default(0)
+  assigneeId       String?  // user id or name
+  position         Float    // fractional index within column
+  createdById      String   // references Better Auth user.id
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  column      Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  column           Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
 
   @@index([columnId, position])
 }
+
+model BoardActivity {
+  id        String   @id @default(uuid())
+  boardId   String
+  userName  String
+  action    String
+  target    String?
+  iconColor String   @default("blue") // orange, green, purple, blue
+  createdAt DateTime @default(now())
+
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, createdAt])
+}
+

@@ -60,6 +60,11 @@ router.post(
   param("columnId").isUUID().withMessage("Invalid columnId"),
   body("title").notEmpty().withMessage("Title is required").trim(),
   body("description").optional().trim(),
+  body("category").optional().trim(),
+  body("dueDate").optional().trim(),
+  body("commentsCount").optional().isInt({ min: 0 }),
+  body("attachmentsCount").optional().isInt({ min: 0 }),
+  body("assigneeId").optional().trim(),
   async (req, res) => {
     if (sendValidationErrors(req, res)) return;
 
@@ -86,10 +91,26 @@ router.post(
           columnId: p(req.params.columnId),
           title: req.body.title,
           description: req.body.description ?? null,
+          category: req.body.category || "UI Design",
+          dueDate: req.body.dueDate ?? "Nov 24",
+          commentsCount: req.body.commentsCount ?? 0,
+          attachmentsCount: req.body.attachmentsCount ?? 0,
+          assigneeId: req.body.assigneeId ?? req.user!.name ?? "You",
           position,
           createdById: req.user!.id,
         },
       });
+
+      // Record activity
+      await prisma.boardActivity.create({
+        data: {
+          boardId,
+          userName: req.user!.name || "Someone",
+          action: "added task",
+          target: task.title,
+          iconColor: "green",
+        },
+      }).catch((e) => console.error("Activity logging error:", e));
 
       res.status(201).json({ task });
     } catch (error) {
@@ -99,7 +120,7 @@ router.post(
   }
 );
 
-// ─── PATCH /api/v1/tasks/:taskId — update title/description (EDITOR+) ──────────
+// ─── PATCH /api/v1/tasks/:taskId — update title/description/category/dueDate (EDITOR+) ──────────
 
 router.patch(
   "/:taskId",
@@ -107,6 +128,11 @@ router.patch(
   param("taskId").isUUID().withMessage("Invalid taskId"),
   body("title").optional().notEmpty().trim(),
   body("description").optional().trim(),
+  body("category").optional().trim(),
+  body("dueDate").optional().trim(),
+  body("commentsCount").optional().isInt({ min: 0 }),
+  body("attachmentsCount").optional().isInt({ min: 0 }),
+  body("assigneeId").optional().trim(),
   async (req, res) => {
     if (sendValidationErrors(req, res)) return;
 
@@ -124,6 +150,11 @@ router.patch(
         data: {
           ...(req.body.title !== undefined && { title: req.body.title }),
           ...(req.body.description !== undefined && { description: req.body.description }),
+          ...(req.body.category !== undefined && { category: req.body.category }),
+          ...(req.body.dueDate !== undefined && { dueDate: req.body.dueDate }),
+          ...(req.body.commentsCount !== undefined && { commentsCount: req.body.commentsCount }),
+          ...(req.body.attachmentsCount !== undefined && { attachmentsCount: req.body.attachmentsCount }),
+          ...(req.body.assigneeId !== undefined && { assigneeId: req.body.assigneeId }),
         },
       });
 

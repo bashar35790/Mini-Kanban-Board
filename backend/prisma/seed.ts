@@ -3,9 +3,6 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "../src/lib/prisma";
 
-// Seed creates a demo user + a second user for sharing, plus a demo board
-// with columns and tasks. Run with: npx tsx prisma/seed.ts
-
 const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: { enabled: true },
@@ -15,21 +12,20 @@ const auth = betterAuth({
 });
 
 const DEMO_USER = {
-  name: "Demo User",
-  email: "demo@kanban.local",
+  name: "Bashar",
+  email: "bashar@flow.com",
   password: "password123",
 };
 
-const DEMO_SHARED_USER = {
-  name: "Collaborator",
-  email: "collab@kanban.local",
-  password: "password123",
-};
+const TEAM_USERS = [
+  { name: "Andrea", email: "andrea@flow.com", password: "password123" },
+  { name: "Karen", email: "karen@flow.com", password: "password123" },
+  { name: "Samantha", email: "samantha@flow.com", password: "password123" },
+];
 
 async function upsertUser(input: { name: string; email: string; password: string }) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) {
-    console.log(`User ${input.email} already exists`);
     return existing;
   }
   const res = await auth.api.signUpEmail({ body: input });
@@ -38,83 +34,256 @@ async function upsertUser(input: { name: string; email: string; password: string
 }
 
 async function main() {
-  console.log("Seeding demo data...");
+  console.log("Seeding authentic demo data matching UI designs...");
 
   const owner = await upsertUser(DEMO_USER);
-  await upsertUser(DEMO_SHARED_USER);
-
-  // Create the demo board if it doesn't exist
-  const existingBoard = await prisma.board.findFirst({
-    where: { title: "Product Launch" },
-  });
-
-  if (existingBoard) {
-    console.log("Demo board already exists, skipping board creation");
-    return;
+  const team = [];
+  for (const u of TEAM_USERS) {
+    team.push(await upsertUser(u));
   }
 
-  const board = await prisma.board.create({
-    data: {
-      title: "Product Launch",
-      description: "A sample kanban board to demo the app",
-      ownerId: owner.id,
-      members: {
-        create: [{ userId: owner.id, role: "OWNER" }],
-      },
-    },
+  // 1. Primary Board matching Image 1: "Homepage Design"
+  let homepageBoard = await prisma.board.findFirst({
+    where: { title: "Homepage Design" },
   });
 
-  console.log(`Created board ${board.id}`);
-
-  const columnTitles = ["Backlog", "To Do", "In Progress", "Done"];
-  const tasksByColumn: Record<string, string[]> = {
-    Backlog: [
-      "Write press release",
-      "Prepare launch metrics dashboard",
-      "Draft customer onboarding emails",
-    ],
-    "To Do": [
-      "Finalize pricing page",
-      "Record product demo video",
-    ],
-    "In Progress": [
-      "Build landing page",
-      "Integrate analytics tracking",
-    ],
-    Done: [
-      "Set up marketing blog",
-      "Define beta feedback survey",
-    ],
-  };
-
-  let colPos = 1000;
-  for (const title of columnTitles) {
-    const column = await prisma.column.create({
+  if (!homepageBoard) {
+    homepageBoard = await prisma.board.create({
       data: {
-        boardId: board.id,
-        title,
-        position: colPos,
+        title: "Homepage Design",
+        description: "New landing page & brand identity",
+        ownerId: owner.id,
+        isFavorite: true,
+        members: {
+          create: [
+            { userId: owner.id, role: "OWNER" },
+            { userId: team[0].id, role: "EDITOR" },
+            { userId: team[1].id, role: "EDITOR" },
+            { userId: team[2].id, role: "VIEWER" },
+          ],
+        },
       },
     });
 
-    colPos += 1000;
+    const columnsData = [
+      {
+        title: "Task Ready",
+        tasks: [
+          {
+            title: "Konsep hero title yang menarik",
+            category: "Copywriting",
+            dueDate: "Nov 24",
+            commentsCount: 2,
+            attachmentsCount: 5,
+            assigneeId: "Andrea",
+          },
+          {
+            title: "Icon di section our services",
+            category: "UI Design",
+            dueDate: "Nov 24",
+            commentsCount: 2,
+            attachmentsCount: 5,
+            assigneeId: "Karen",
+          },
+        ],
+      },
+      {
+        title: "On Progress",
+        tasks: [
+          {
+            title: "Membuat konsep ilustrasi untuk halaman about us",
+            category: "UI Design",
+            dueDate: "Nov 24",
+            commentsCount: 2,
+            attachmentsCount: 5,
+            assigneeId: "Samantha",
+          },
+          {
+            title: "Membuat konsep ilustrasi untuk halaman about us",
+            category: "Illustration",
+            dueDate: "Nov 24",
+            commentsCount: 2,
+            attachmentsCount: 5,
+            assigneeId: "Andrea",
+          },
+          {
+            title: "Membuat konsep ilustrasi untuk halaman about us",
+            category: "Copywriting",
+            dueDate: "Nov 24",
+            commentsCount: 2,
+            attachmentsCount: 5,
+            assigneeId: "Karen",
+          },
+          {
+            title: "Membuat konsep ilustrasi untuk halaman about us",
+            category: "Illustration",
+            dueDate: "Nov 24",
+            commentsCount: 2,
+            attachmentsCount: 5,
+            assigneeId: "Samantha",
+          },
+        ],
+      },
+      {
+        title: "Needs Review",
+        tasks: [
+          {
+            title: "Membuat konsep ilustrasi untuk halaman about us",
+            category: "Copywriting",
+            dueDate: "Nov 24",
+            commentsCount: 2,
+            attachmentsCount: 5,
+            assigneeId: "Karen",
+          },
+          {
+            title: "Membuat konsep ilustrasi untuk halaman about us",
+            category: "UI Design",
+            dueDate: "Nov 24",
+            commentsCount: 2,
+            attachmentsCount: 5,
+            assigneeId: "Samantha",
+          },
+          {
+            title: "Membuat konsep ilustrasi untuk halaman about us",
+            category: "Illustration",
+            dueDate: "Nov 24",
+            commentsCount: 2,
+            attachmentsCount: 5,
+            assigneeId: "Andrea",
+          },
+        ],
+      },
+      {
+        title: "Done",
+        tasks: [
+          {
+            title: "Membuat konsep ilustrasi untuk halaman about us",
+            category: "Illustration",
+            dueDate: "Nov 24",
+            commentsCount: 2,
+            attachmentsCount: 5,
+            assigneeId: "Samantha",
+          },
+          {
+            title: "Membuat konsep ilustrasi untuk halaman about us",
+            category: "Copywriting",
+            dueDate: "Nov 24",
+            commentsCount: 2,
+            attachmentsCount: 5,
+            assigneeId: "Andrea",
+          },
+          {
+            title: "Membuat konsep ilustrasi untuk halaman about us",
+            category: "UI Design",
+            dueDate: "Nov 24",
+            commentsCount: 2,
+            attachmentsCount: 5,
+            assigneeId: "Karen",
+          },
+        ],
+      },
+    ];
 
-    let taskPos = 1000;
-    for (const taskTitle of tasksByColumn[title] ?? []) {
-      await prisma.task.create({
+    let colPos = 1000;
+    for (const col of columnsData) {
+      const createdCol = await prisma.column.create({
         data: {
-          columnId: column.id,
-          title: taskTitle,
-          description: null,
-          position: taskPos,
-          createdById: owner.id,
+          boardId: homepageBoard.id,
+          title: col.title,
+          position: colPos,
         },
       });
-      taskPos += 1000;
+      colPos += 1000;
+
+      let taskPos = 1000;
+      for (const t of col.tasks) {
+        await prisma.task.create({
+          data: {
+            columnId: createdCol.id,
+            title: t.title,
+            category: t.category,
+            dueDate: t.dueDate,
+            commentsCount: t.commentsCount,
+            attachmentsCount: t.attachmentsCount,
+            assigneeId: t.assigneeId,
+            position: taskPos,
+            createdById: owner.id,
+          },
+        });
+        taskPos += 1000;
+      }
+    }
+
+    // Seed Activities matching Image 1
+    const activities = [
+      { userName: "Andrea", action: "uploaded 3 documents", iconColor: "orange" },
+      { userName: "Karen", action: "left some comments", iconColor: "green" },
+      { userName: "Karen", action: "changed project descriptions", iconColor: "purple" },
+      { userName: "Andrea", action: "uploaded 3 documents", iconColor: "orange" },
+      { userName: "Karen", action: "left some comments", iconColor: "green" },
+    ];
+
+    for (const act of activities) {
+      await prisma.boardActivity.create({
+        data: {
+          boardId: homepageBoard.id,
+          userName: act.userName,
+          action: act.action,
+          iconColor: act.iconColor,
+        },
+      });
     }
   }
 
-  console.log("Seeded columns and tasks for demo board");
+  // 2. Dashboard Boards matching Image 2
+  const additionalBoards = [
+    { title: "Website Redesign", description: "New landing & brand", isFav: true },
+    { title: "Product Development", description: "Sprint 23", isFav: true },
+    { title: "Marketing Campaign", description: "Q4 launch", isFav: false },
+    { title: "Mobile App", description: "React Native", isFav: true },
+  ];
+
+  for (const b of additionalBoards) {
+    const exists = await prisma.board.findFirst({ where: { title: b.title } });
+    if (!exists) {
+      const created = await prisma.board.create({
+        data: {
+          title: b.title,
+          description: b.description,
+          ownerId: owner.id,
+          isFavorite: b.isFav,
+          members: {
+            create: [{ userId: owner.id, role: "OWNER" }],
+          },
+        },
+      });
+
+      // Add default columns
+      const col = await prisma.column.create({
+        data: {
+          boardId: created.id,
+          title: "To Do",
+          position: 1000,
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          columnId: col.id,
+          title: `Initial scope for ${b.title}`,
+          category: "UI Design",
+          dueDate: "Nov 28",
+          commentsCount: 1,
+          attachmentsCount: 2,
+          assigneeId: "Andrea",
+          position: 1000,
+          createdById: owner.id,
+        },
+      });
+    }
+  }
+
+  console.log("Demo seed completed successfully!");
 }
 
 main()

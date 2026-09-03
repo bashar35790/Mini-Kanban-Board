@@ -66,15 +66,40 @@ router.get("/", authenticate, async (req, res) => {
     const memberships = await prisma.boardMember.findMany({
       where: { userId: req.user!.id },
       include: {
-        board: true,
+        board: {
+          include: {
+            _count: {
+              select: {
+                tasks: false,
+                members: true,
+              },
+            },
+            columns: {
+              select: {
+                _count: {
+                  select: { tasks: true },
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: { createdAt: "asc" },
     });
 
-    const boards = memberships.map((m) => ({
-      ...m.board,
-      role: m.role,
-    }));
+    const boards = memberships.map((m) => {
+      const taskCount = m.board.columns.reduce(
+        (sum, col) => sum + col._count.tasks,
+        0
+      );
+      const { columns, _count, ...boardData } = m.board;
+      return {
+        ...boardData,
+        role: m.role,
+        memberCount: _count.members,
+        taskCount,
+      };
+    });
 
     res.json({ boards });
   } catch (error) {
@@ -112,6 +137,10 @@ router.get(
               createdAt: true,
             },
           },
+          activities: {
+            orderBy: { createdAt: "desc" },
+            take: 20,
+          },
         },
       });
 
@@ -120,9 +149,51 @@ router.get(
         return;
       }
 
-      res.json({ board, yourRole: req.boardMember?.role });
+      // Enrich members with basic user details
+      const enrichedMembers = await Promise.all(
+        board.members.map(async (m) => {
+          const user = await prisma.user.findUnique({
+            where: { id: m.userId },
+            select: { id: true, name: true, email: true, image: true },
+          });
+          return { ...m, user };
+        })
+      );
+
+      res.json({
+        board: { ...board, members: enrichedMembers },
+        yourRole: req.boardMember?.role,
+      });
     } catch (error) {
       console.error("Get board error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+// PATCH /api/v1/boards/:boardId/favorite — toggle favorite flag (VIEWER+)
+router.patch(
+  "/:boardId/favorite",
+  authenticate,
+  param("boardId").isUUID().withMessage("Invalid boardId"),
+  requireBoardAccess("VIEWER"),
+  async (req, res) => {
+    if (sendValidationErrors(req, res)) return;
+
+    try {
+      const current = await prisma.board.findUnique({
+        where: { id: p(req.params.boardId) },
+        select: { isFavorite: true },
+      });
+
+      const board = await prisma.board.update({
+        where: { id: p(req.params.boardId) },
+        data: { isFavorite: !current?.isFavorite },
+      });
+
+      res.json({ board });
+    } catch (error) {
+      console.error("Toggle favorite error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
